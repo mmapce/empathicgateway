@@ -45,10 +45,11 @@ substitutions:
   _SERVICE_NAME: empathic-backend
   _DOCKERFILE: Dockerfile.backend
   _DEPLOY_REGION: europe-west1
-  _MEMORY: 2Gi
-  _CPU: '2'
-  _TIMEOUT: '300'
+  _MEMORY: 4Gi
+  _CPU: '4'
+  _TIMEOUT: '600'
   _PORT: '8081'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

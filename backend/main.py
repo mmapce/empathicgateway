@@ -107,13 +107,26 @@ async def lifespan(app: FastAPI):
     try:
         import sys
         import backend.train_model
-        # Model configuration
-        MODEL_REPO = "mmapce/empathicgateway-intent-classifier"  # Hugging Face repository
-        MODEL_FILENAME = "urgency_model.joblib"
-        CACHE_DIR = "/tmp/model_cache"  # Cloud Run writable directory.
         sys.modules['__main__'].BertEmbedder = backend.train_model.BertEmbedder
-        model = joblib.load("backend/urgency_model.joblib")
-        logger.info("✅ Urgency Model (BERT) Loaded Successfully.")
+        
+        # Try local model first (for development)
+        local_path = "backend/urgency_model.joblib"
+        if os.path.exists(local_path):
+            model = joblib.load(local_path)
+            logger.info(f"✅ Urgency Model loaded from local file: {local_path}")
+        else:
+            # Fallback to Hugging Face Hub (for Cloud Run)
+            logger.info("📥 Local model not found, downloading from Hugging Face Hub...")
+            MODEL_REPO = "mmapce/empathicgateway-intent-classifier"
+            MODEL_FILENAME = "urgency_model.joblib"
+            CACHE_DIR = "/tmp/model_cache"
+            model_path = hf_hub_download(
+                repo_id=MODEL_REPO,
+                filename=MODEL_FILENAME,
+                cache_dir=CACHE_DIR
+            )
+            model = joblib.load(model_path)
+            logger.info(f"✅ Urgency Model loaded from HF Hub: {model_path}")
     except Exception as e:
         logger.error(f"❌ Failed to load urgency model: {e}")
     

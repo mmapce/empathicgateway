@@ -62,6 +62,7 @@ if 'stress_active' not in st.session_state: st.session_state.stress_active = Fal
 if 'stress_stats' not in st.session_state: st.session_state.stress_stats = {"Critical": 0, "High": 0, "Normal": 0, "Blocked": 0, "PII": 0}
 if 'stress_history' not in st.session_state: st.session_state.stress_history = []
 if 'stress_traffic_log' not in st.session_state: st.session_state.stress_traffic_log = []
+if 'request_interval' not in st.session_state: st.session_state.request_interval = 0.5
 # Initialize Config State if not present
 if 'sc_crit' not in st.session_state: st.session_state.sc_crit = 2
 if 'sc_high' not in st.session_state: st.session_state.sc_high = 3
@@ -100,6 +101,19 @@ with st.sidebar.expander("⚙️ Configuration"):
         except:
             st.error("Config Failed")
             
+    st.markdown("---")
+    st.caption("⚡ Request Rate Control")
+    interval = st.slider(
+        "Request Interval (seconds)",
+        min_value=0.1,
+        max_value=2.0,
+        value=st.session_state.request_interval,
+        step=0.1,
+        help=f"Current: {1/st.session_state.request_interval:.1f} req/s"
+    )
+    st.session_state.request_interval = interval
+    st.caption(f"📊 Rate: **{1/interval:.1f} requests/second**")
+    
     st.markdown("---")
     st.caption("Stress Composition (Per Tick)")
     # Sliders using session keys, default to previous values
@@ -521,5 +535,5 @@ if st.session_state.stress_active:
     })
     st.session_state.stress_history = st.session_state.stress_history[-20:]
     
-    time.sleep(0.5)
+    time.sleep(st.session_state.request_interval)
     st.rerun()

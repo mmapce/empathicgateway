@@ -4,17 +4,19 @@ import time
 import joblib
 import logging
 import re
+import os
 from concurrent.futures import ThreadPoolExecutor
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import FastAPI, HTTPException, status, Request, Header
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from .models import ChatRequest, ChatResponse
+from typing import Tuple, List
+from fastapi.middleware.cors import CORSMiddleware
+from .models import ChatRequest, ChatResponse, ConfigRequest, StatsResponse
 from .worker import simulate_llm_processing
 from transformers import pipeline
-import logging
+from huggingface_hub import hf_hub_download
+
 # Import Custom Transformer Class to ensure Pickle can find it
-import sys
-from .train_model import BertEmbedder 
 # Hack to make the class available in __main__ scope if pickle needs it, 
 # although importing it from module is safer. Better to ensure train_model is available.
 # Actually, joblib needs the class definition available. 
@@ -105,6 +107,10 @@ async def lifespan(app: FastAPI):
     try:
         import sys
         import backend.train_model
+        # Model configuration
+        MODEL_REPO = "mmapce/empathicgateway-intent-classifier"  # Hugging Face repository
+        MODEL_FILENAME = "urgency_model.joblib"
+        CACHE_DIR = "/tmp/model_cache"  # Cloud Run writable directory.
         sys.modules['__main__'].BertEmbedder = backend.train_model.BertEmbedder
         model = joblib.load("backend/urgency_model.joblib")
         logger.info("✅ Urgency Model (BERT) Loaded Successfully.")

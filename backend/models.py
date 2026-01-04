@@ -13,6 +13,17 @@ class ChatResponse(BaseModel):
     message: str
     confidence: float
     pii_detected: bool
-    pii_types: List[str] = []  # New: List of detected PII types
-    intent: str # Added for Explainability
+    pii_types: List[str] = []
+    intent: str
     explainability: Dict[str, float] = {}
+
+class ConfigRequest(BaseModel):
+    fast_limit: Optional[int] = None
+    normal_limit: Optional[int] = None
+
+class StatsResponse(BaseModel):
+    total_requests: int
+    fast_lane_active: int
+    normal_lane_active: int
+    fast_lane_limit: int
+    normal_lane_limit: int

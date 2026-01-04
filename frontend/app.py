@@ -41,6 +41,17 @@ def extract_pii_type(text):
         
     return "Unknown"
 
+def format_intent(intent):
+    """Convert technical intent names to user-friendly labels"""
+    if not intent or intent == "unknown":
+        return "Unknown Intent"
+    if intent == "uncertain":
+        return "Low Confidence"
+    
+    # Convert snake_case to Title Case
+    return intent.replace('_', ' ').title()
+
+
 # --- STYLING ---
 st.markdown("""
 <style>
@@ -517,7 +528,7 @@ if st.session_state.stress_active:
             icon = "🛡️" if pii else ""
             st.session_state.stress_traffic_log.insert(0, {
                 "Time": ts, 
-                "Reason": intent,
+                "Reason": format_intent(intent),
                 "Lane": label,
                 "Input": p['text'], 
                 "Status": f"{status} {icon}",

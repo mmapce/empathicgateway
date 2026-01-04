@@ -12,5 +12,5 @@ COPY backend/ ./backend/
 # Expose port
 EXPOSE 8081
 
-# Run with production server
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8081"]
+# Run with production server (use Cloud Run's PORT env var)
+CMD uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8081}

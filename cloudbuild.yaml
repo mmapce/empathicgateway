@@ -35,8 +35,6 @@ steps:
       - '$_CPU'
       - '--timeout'
       - '$_TIMEOUT'
-      - '--port'
-      - '$_PORT'
 
 substitutions:
   _SERVICE_NAME: empathic-backend

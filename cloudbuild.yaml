@@ -35,6 +35,11 @@ steps:
       - '$_CPU'
       - '--timeout'
       - '$_TIMEOUT'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '0'
+      - '--cpu-boost'
 
 substitutions:
   _SERVICE_NAME: empathic-backend

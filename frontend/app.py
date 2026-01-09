@@ -114,7 +114,7 @@ with st.sidebar.expander("⚙️ Configuration"):
     
     if st.button("Apply Config"):
         try:
-            requests.post(f"{API_URL}/config", json={"fast_limit": lc_fast, "normal_limit": lc_norm}, timeout=1)
+            requests.post(f"{API_URL}/config", json={"fast_limit": lc_fast, "normal_limit": lc_norm}, headers={"X-API-Key": "empathic-secret-key"}, timeout=1)
             st.toast("Configuration Updated!")
         except:
             st.error("Config Failed")
@@ -304,7 +304,7 @@ with col_chat:
         st.session_state.messages.append({"role": "user", "content": prompt})
         
         try:
-            res = requests.post(f"{API_URL}/chat", json={"text": prompt}, headers={"X-API-KEY": "secure-key-123"}, timeout=5)
+            res = requests.post(f"{API_URL}/chat", json={"text": prompt}, headers={"X-API-Key": "empathic-secret-key"}, timeout=5)
             if res.status_code == 200:
                 data = res.json()
                 st.session_state.last_meta = data
@@ -491,7 +491,7 @@ if st.session_state.stress_active:
     
     def send_req(payload):
         try:
-            res = requests.post(f"{API_URL}/chat", json=payload, headers={"X-API-KEY": "secure-key-123"}, timeout=5)
+            res = requests.post(f"{API_URL}/chat", json=payload, headers={"X-API-Key": "empathic-secret-key"}, timeout=5)
             if res.status_code == 200:
                 d = res.json()
                 # Return explainability dict as well

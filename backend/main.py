@@ -6,7 +6,8 @@ import logging
 import re
 import os
 from concurrent.futures import ThreadPoolExecutor
-from fastapi import FastAPI, HTTPException, status, Request, Header
+from fastapi import FastAPI, HTTPException, status, Request, Header, Security, Depends
+from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from typing import Tuple, List
@@ -37,6 +38,19 @@ lane_state = {
     "normal_active": 0
 }
 state_lock = asyncio.Lock()
+
+# --- SECURITY ---
+API_KEY_NAME = "X-API-Key"
+API_KEY = os.getenv("API_KEY", "empathic-secret-key")
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    if api_key_header == API_KEY:
+        return api_key_header
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing API Key"
+    )
 
 # --- GUARDRAILS: PII MASKING (Hybrid: Regex + NER) ---
 def mask_pii(text: str):
@@ -91,6 +105,40 @@ def mask_pii(text: str):
             logger.warning(f"NER failed: {e}")
     
     return masked, pii_types
+
+# Guardrails: Prompt Injection Detection
+def detect_prompt_injection(text: str) -> bool:
+    """
+    Heuristic check for common jailbreak patterns.
+    """
+    patterns = [
+        r"ignore previous instructions",
+        r"ignore all instructions",
+        r"system prompt",
+        r"you are now DAN",
+        r"do anything now",
+        r"browse the web",
+        r"delete your data"
+    ]
+    for pattern in patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            return True
+    return False
+
+# Guardrails: Output Filtering
+def validate_output(text: str) -> bool:
+    """
+    Ensures the model/agent response is safe.
+    """
+    blocked_patterns = [
+        r"hashed_password",
+        r"private_key",
+        r"internal_server_error"
+    ]
+    for pattern in blocked_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            return False
+    return True
 
 # Global State
 model = None
@@ -152,7 +200,7 @@ async def health_check():
         "ner_loaded": ner_pipeline is not None
     }
 
-@app.post("/config")
+@app.post("/config", dependencies=[Depends(get_api_key)])
 async def update_config(config: dict):
     # Expects {"fast_limit": 10, "normal_limit": 5}
     global LANE_CONFIG
@@ -193,17 +241,33 @@ def run_inference(text: str):
     
     return predicted_intent, priority, max_prob, explainability
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat", response_model=ChatResponse, dependencies=[Depends(get_api_key)])
 async def chat_endpoint(request: ChatRequest):
     ticket_id = str(uuid.uuid4())[:8]
     loop = asyncio.get_running_loop()
 
-    # Guardrails: PII Masking
+    # Guardrails 1: Prompt Injection Check
+    if detect_prompt_injection(request.text):
+        logger.warning(f"🚨 [SECURITY_AUDIT] [Ticket {ticket_id}] Prompt Injection Detected! Input: {request.text}")
+        return ChatResponse(
+            ticket_id=ticket_id,
+            priority=0,
+            label="BLOCKED",
+            wait_time="0.0s",
+            message="Request blocked by security policy (Prompt Injection Detected).",
+            confidence=1.0,
+            pii_detected=False,
+            pii_types=[],
+            intent="malicious",
+            explainability={}
+        )
+
+    # Guardrails 2: PII Masking
     safe_text, pii_types = mask_pii(request.text)
     pii_detected = len(pii_types) > 0
     
     if pii_detected:
-        logger.info(f"🛡️ [Ticket {ticket_id}] PII Masked: {safe_text} | Types: {pii_types}")
+        logger.info(f"🛡️ [SECURITY_AUDIT] [Ticket {ticket_id}] PII Masked: {safe_text} | Types: {pii_types}")
     
     # 1. CPU Offloading: Predict
     intent, priority, confidence, explainability = await loop.run_in_executor(executor, run_inference, safe_text)
@@ -228,6 +292,11 @@ async def chat_endpoint(request: ChatRequest):
         logger.info(f"✅ Processing in {lane_name} ({lane_state[lane_key]}/{lane_limit})")
         # Simulate Processing
         llm_response = await simulate_llm_processing(request.text, ticket_id)
+
+        # Guardrails 3: Output Filtering
+        if not validate_output(llm_response):
+            logger.error(f"🚨 [SECURITY_AUDIT] [Ticket {ticket_id}] Unsafe Output Blocked!")
+            llm_response = "[Response Redacted by Safety Policy]"
         
         return ChatResponse(
             ticket_id=ticket_id,

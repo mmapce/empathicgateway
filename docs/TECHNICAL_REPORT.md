@@ -34,11 +34,18 @@ The initial dataset (Bitext) lacked nuance for low-priority chatter. We implemen
 *   **Normal Injection:** Added conversational samples ("Just browsing", "Thanks", "Hello") labeled as `chit_chat`.
 *   **Result:** The model natively distinguishes between *"I lost my card"* (Critical) and *"I lost the game"* (Normal), removing the need for fragile `if/else` keyword filters.
 
-## 4. Privacy & Zero-Trust Security
-Privacy is handled *before* any data enters the processing pipeline or database.
-1.  **Metric-Based Regex:** Instantly redacts structured PII (Credit Cards, Emails) with 100% certainty.
-2.  **Contextual NER (BERT):** Detects unstructured entities like Names (`[PERSON]`), Locations (`[LOC]`), and Organizations (`[ORG]`).
-*   **Output:** `My name is Murat` → `My name is [PERSON]`.
+## 4. Security & Guardrails
+We implement a multi-layered defense strategy ("Defense in Depth") compliant with **Track 1** requirements.
+
+### 4.1 Input Validation & Policy
+*   **Prompt Injection Prevention:** A dedicated heuristic layer scans for jailbreak attempts (e.g., *"Ignore previous instructions"*, *"DAN Mode"*). Malicious inputs are instantly rejected with a `BLOCKED` status.
+*   **PII Masking (Zero-Trust):** Privacy is handled *before* inference.
+    1.  **Metric-Based Regex:** Instantly redacts Credit Cards/Emails.
+    2.  **Contextual NER (BERT):** Redacts Names, Locations, Organizations.
+
+### 4.2 Output Filtering & Auditing
+*   **Output Policy Enforcement:** The Gateway inspects agent responses to prevent leakage of sensitive keys (`hashed_password`, `private_key`) or internal errors.
+*   **Security Audit Logs:** All blocked requests (Injection, PII) are logged with a `[SECURITY_AUDIT]` tag, providing a clear trail for post-incident analysis.
 
 ## 5. Resilience: Chaos Engineering
 The system is built to survive saturation.

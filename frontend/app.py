@@ -62,10 +62,8 @@ st.markdown("""
     .badge-critical { background-color: #DC3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
     .badge-high { background-color: #FD7E14; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
     .badge-normal { background-color: #28A745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
-</style>
-""", unsafe_allow_html=True)
-
-API_URL = "http://localhost:8081"
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- STATE ---
 if 'logs' not in st.session_state: st.session_state.logs = ["[System] Ready"]
@@ -79,6 +77,15 @@ if 'sc_crit' not in st.session_state: st.session_state.sc_crit = 2
 if 'sc_high' not in st.session_state: st.session_state.sc_high = 3
 if 'sc_norm' not in st.session_state: st.session_state.sc_norm = 3
 if 'sc_pii' not in st.session_state: st.session_state.sc_pii = 2
+
+# --- SANITIZE STATE (Fix for Stale Logs) ---
+# Ensures that even if the session has old data, we don't crash on missing keys
+if st.session_state.stress_traffic_log:
+    for entry in st.session_state.stress_traffic_log:
+        defaults = {"Reason": "-", "Lane": "-", "Input": "-", "Status": "-", "PII": False, "Time": "-"}
+        for k, v in defaults.items():
+            if k not in entry:
+                entry[k] = v
 
 def add_log(msg):
     ts = time.strftime("%H:%M:%S")
@@ -195,19 +202,7 @@ st.sidebar.subheader("📜 Event Log")
 log_content = "<br>".join(st.session_state.logs)
 st.sidebar.markdown(
     f"""
-    <div style="
-        background-color: #f0f0f0; 
-        color: #333; 
-        padding: 8px; 
-        border-radius: 5px; 
-        font-family: monospace; 
-        font-size: 0.75rem; 
-        height: 150px; 
-        overflow-y: auto; 
-        white-space: pre-wrap; 
-        word-wrap: break-word; 
-        border: 1px solid #ccc;
-    ">
+    <div style='background-color: #f0f0f0; color: #333; padding: 8px; border-radius: 5px; font-family: monospace; font-size: 0.75rem; height: 150px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #ccc;'>
         {log_content}
     </div>
     """, 
@@ -335,6 +330,11 @@ with col_monitor:
         st.subheader("🔎 Traffic Inspector")
         if st.session_state.stress_traffic_log:
             df = pd.DataFrame(st.session_state.stress_traffic_log)
+            # Safety: Ensure columns exist (handles stale session state)
+            for required in ["Reason", "Lane", "Input", "Status"]:
+                if required not in df.columns:
+                    df[required] = "-"
+
             # Display Columns
             display_df = df[["Time", "Input", "Reason", "Lane", "Status"]]
             

@@ -81,11 +81,18 @@ if __name__ == "__main__":
         {"instruction": "hi there", "intent": "greeting", "priority": 3},
         {"instruction": "good morning", "intent": "greeting", "priority": 3},
         {"instruction": "have a nice day", "intent": "greeting", "priority": 3},
-        {"instruction": "are you kidding me", "intent": "complaint", "priority": 3}, # Re-label as complaint but maybe normal priority? No, keep logic consistent.
-        # Actually user wants "are you kidding" as Normal? Let's call it "chit_chat" for safety or "complaint".
-        # If it is complaint, map_priority makes it Critical.
-        # Let's force "chit_chat" to ensure it maps to Normal.
-        {"instruction": "garbage text", "intent": "chit_chat", "priority": 3}
+        {"instruction": "are you kidding me", "intent": "complaint", "priority": 3}, 
+        {"instruction": "garbage text", "intent": "chit_chat", "priority": 3},
+        # conversational / browsing overrides
+        {"instruction": "just browsing thanks", "intent": "chit_chat", "priority": 3},
+        {"instruction": "just browsing, thanks for the help", "intent": "chit_chat", "priority": 3},
+        {"instruction": "i am just looking around", "intent": "chit_chat", "priority": 3},
+        {"instruction": "no help needed just browsing", "intent": "chit_chat", "priority": 3},
+        {"instruction": "checking prices thanks", "intent": "chit_chat", "priority": 3},
+        {"instruction": "thanks for the help", "intent": "chit_chat", "priority": 3},
+        {"instruction": "thank you", "intent": "chit_chat", "priority": 3},
+        {"instruction": "thanks", "intent": "chit_chat", "priority": 3},
+        {"instruction": "im ok", "intent": "chit_chat", "priority": 3}
     ]
     synthetic_normal = synthetic_normal * 10
 

@@ -1,10 +1,10 @@
 
-import pexpect
+import os
 
 NAS_IP = "192.168.50.21"
 NAS_PORT = "5354"
 NAS_USER = "muratkorkmaz"
-NAS_PASS = "53549168888.Nas.Murat"
+NAS_PASS = os.getenv("NAS_PASS", "ENTER_PASSWORD_HERE")
 REMOTE_TEMP = "/tmp/app.py"
 LOCAL_FILE = "frontend/app.py"
 CONTAINER_NAME = "empathicgateway-frontend-1"

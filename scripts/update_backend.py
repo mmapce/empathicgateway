@@ -5,7 +5,7 @@ import time
 NAS_IP = "192.168.50.21"
 NAS_PORT = "5354"
 NAS_USER = "muratkorkmaz"
-NAS_PASS = "53549168888.Nas.Murat"
+NAS_PASS = os.getenv("NAS_PASS", "ENTER_PASSWORD_HERE")
 REMOTE_TEMP_MAIN = "/tmp/main.py"
 REMOTE_TEMP_MODELS = "/tmp/models.py"
 LOCAL_FILE_MAIN = "backend/main.py"

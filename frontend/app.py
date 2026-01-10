@@ -535,9 +535,10 @@ with col_monitor:
         if st.session_state.stress_traffic_log:
             # Reconstruct DF for PII
             df_sec = pd.DataFrame(st.session_state.stress_traffic_log)
-            pii_df = df_sec[df_sec["PII"]].copy()
-            if not pii_df.empty:
-                pii_df["Violation Type"] = pii_df["Input"].apply(extract_pii_type)
+            # Filter where PII was detected
+            pii_df = df_sec[df_sec["PII"]].copy() 
+            # Use the "Violation Type" column directly (populated from backend)
+            # pii_df["Violation Type"] = pii_df["Input"].apply(extract_pii_type) # REMOVED
                 st.dataframe(
                     pii_df[["Time", "Violation Type", "Input", "Lane"]],
                     use_container_width=True,
@@ -639,16 +640,17 @@ if st.session_state.stress_active:
                     d.get("pii_detected", False),
                     d.get("intent", "-"),
                     d.get("explainability", {}),
+                    d.get("pii_types", []),
                 )
-            return res.status_code, "BLOCKED", False, "throttled", {}
+            return res.status_code, "BLOCKED", False, "throttled", {}, []
         except Exception:
-            return 0, "ERR", False, "error", {}
+            return 0, "ERR", False, "error", {}, []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=total_reqs) as executor:
         f_map = {executor.submit(send_req, p): p for p in payloads}
         for f in concurrent.futures.as_completed(f_map):
             p = f_map[f]
-            status, label, pii, intent, explain = f.result()
+            status, label, pii, intent, explain, pii_types = f.result()
 
             if status == 200:
                 if label == "CRITICAL":
@@ -678,6 +680,10 @@ if st.session_state.stress_active:
                 {
                     "Time": ts,
                     "Reason": format_intent(intent),
+                    "Lane": "🔴 Blocked" if status != 200 else lane,
+                    "PII": pii,
+                    "Violation Type": ", ".join(pii_types) if pii_types else "-",
+                    "Input": p,
                     "Lane": label,
                     "Input": p["text"],
                     "Status": f"{status} {icon}",

@@ -52,7 +52,23 @@ async def get_api_key(api_key_header: str = Security(api_key_header)):
         detail="Invalid or missing API Key"
     )
 
-# --- GUARDRAILS: PII MASKING (Hybrid: Regex + NER) ---
+# Guardrails: PII MASKING (Hybrid: Regex + NER)
+# Global State
+model = None
+ner_pipeline = None
+executor = ThreadPoolExecutor(max_workers=1)
+
+def get_ner_pipeline():
+    global ner_pipeline
+    if ner_pipeline is None:
+        logger.info("⏳ Lazy Loading NER Pipeline...")
+        try:
+            ner_pipeline = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
+            logger.info("✅ NER Pipeline Loaded.")
+        except Exception as e:
+            logger.error(f"❌ Failed to load NER: {e}")
+    return ner_pipeline
+
 def mask_pii(text: str):
     """
     Returns: (masked_text, pii_types_list)
@@ -73,15 +89,20 @@ def mask_pii(text: str):
         pii_types.append("ID_NUMBER")
         masked = re.sub(r'\b\d{7,11}\b', '[ID_NUMBER]', masked)
     
-    phone_pattern = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    phone_pattern = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d{3}[-.]?\d{4}\b'
     if re.search(phone_pattern, masked):
         pii_types.append("PHONE")
         masked = re.sub(phone_pattern, '[PHONE]', masked)
     
     # 2. NER-based (Unstructured PII: Names, Locations, Orgs)
-    if ner_pipeline:
+    # Lazy Load if needed (for Notebook usage)
+    nlp = get_ner_pipeline()
+    
+    if nlp:
         try:
-            entities = ner_pipeline(text)
+            # CRITICAL FIX: Run NER on 'masked' (current state), not 'text' (original)
+            # This prevents index misalignment if regex replacements occurred earlier.
+            entities = nlp(masked)
             # Sort by start position in reverse to avoid index shifting during replacement
             entities_sorted = sorted(entities, key=lambda x: x['start'], reverse=True)
             
@@ -89,6 +110,11 @@ def mask_pii(text: str):
                 entity_type = ent.get('entity_group', ent.get('entity', '')).replace('B-', '').replace('I-', '')
                 start, end = ent['start'], ent['end']
                 
+                # Check if we are overwriting an existing mask (heuristic)
+                segment = masked[start:end]
+                if '[' in segment and ']' in segment:
+                    continue
+
                 if entity_type == 'PER':
                     if 'PERSON' not in pii_types:
                         pii_types.append("PERSON")
@@ -103,6 +129,8 @@ def mask_pii(text: str):
                     masked = masked[:start] + '[ORG]' + masked[end:]
         except Exception as e:
             logger.warning(f"NER failed: {e}")
+        except Exception as e:
+            logger.warning(f"NER failed: {e}")
     
     return masked, pii_types
 
@@ -112,8 +140,10 @@ def detect_prompt_injection(text: str) -> bool:
     Heuristic check for common jailbreak patterns.
     """
     patterns = [
-        r"ignore previous instructions",
-        r"ignore all instructions",
+        r"ignore previous",
+        r"ignore all",
+        r"ignore.*instructions",
+        r"ignore.*rules",
         r"system prompt",
         r"you are now DAN",
         r"do anything now",
@@ -143,7 +173,8 @@ def validate_output(text: str) -> bool:
 # Global State
 model = None
 ner_pipeline = None
-executor = ThreadPoolExecutor(max_workers=1)
+# executor is defined in global scope above, no need to redefine if not moved, 
+# but my previous edit put it in the block. Let's make sure it's cleaning up correctly.
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

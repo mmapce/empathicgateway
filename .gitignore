@@ -83,7 +83,6 @@ docs/DIAGRAMS.md
 docs/ARCHITECTURE_DIAGRAMS.drawio
 docs/HUGGINGFACE_UPLOAD.md
 cloudbuild*.yaml
-backend/worker.py
 backend/debug_*.py
 backend/list_intents.py
 scripts/check_cloud_run.sh

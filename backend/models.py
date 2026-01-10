@@ -1,9 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List
 
+
 class ChatRequest(BaseModel):
-    text: str = Field(..., max_length=2048, description="User query text, limited to 2048 chars")
+    text: str = Field(
+        ..., max_length=2048, description="User query text, limited to 2048 chars"
+    )
     user_id: Optional[str] = "anonymous"
+
 
 class ChatResponse(BaseModel):
     ticket_id: str
@@ -17,9 +21,11 @@ class ChatResponse(BaseModel):
     intent: str
     explainability: Dict[str, float] = {}
 
+
 class ConfigRequest(BaseModel):
     fast_limit: Optional[int] = None
     normal_limit: Optional[int] = None
+
 
 class StatsResponse(BaseModel):
     total_requests: int

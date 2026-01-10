@@ -102,16 +102,16 @@ def mask_pii(text: str):
 
     # 6. Context-Aware Fallbacks
     
-    # ID Context: "id is 123456789", "tckn: 1234567"
-    # Catches shorter/different IDs if explicitly labeled as ID. Relaxed to 5+ digits.
-    context_id = r"(?i)\b(?:id|identification|tckn|passport|no|number)[\s\W]{0,5}(\d{5,})\b"
+    # ID Context: "id is 123456", "identification number: 12345"
+    # Matches keyword + up to 20 non-digit chars (e.g. " is ", " number is ") + number
+    context_id = r"(?i)\b(?:id|identification|tckn|passport|no|number)\b(?:[^0-9]{0,20})?(\d{5,})\b"
     if re.search(context_id, masked):
          pii_types.append("ID_NUMBER")
          def repl(m): return m.group(0).replace(m.group(1), "[ID_NUMBER]")
          masked = re.sub(context_id, repl, masked)
 
-    # Phone Context: "phone is 123456"
-    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact)[\s\W]{0,5}(\d{6,})\b"
+    # Phone Context: "phone is 123456", "call me at 123456"
+    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact)\b(?:[^0-9]{0,20})?(\d{6,})\b"
     if re.search(context_phone, masked):
          pii_types.append("PHONE")
          def repl(m): return m.group(0).replace(m.group(1), "[PHONE]")

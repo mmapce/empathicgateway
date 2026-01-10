@@ -496,7 +496,8 @@ with col_monitor:
 
     with tab_analytics:
         st.subheader("🔥 Live Chaos Metrics")
-        if st.session_state.stress_active:
+        # Fix: Show metrics if stats exist, even if stopped
+        if st.session_state.stress_stats["Total"] > 0 or st.session_state.stress_active:
             m1, m2, m3, m4 = st.columns(4)
             total_ok = (
                 st.session_state.stress_stats["Critical"]

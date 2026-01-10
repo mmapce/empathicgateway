@@ -682,7 +682,7 @@ if st.session_state.stress_active:
                 {
                     "Time": ts,
                     "Reason": format_intent(intent),
-                    "Lane": "🔴 Blocked" if status != 200 else lane,
+                    "Lane": "🔴 Blocked" if status != 200 else label,
                     "PII": pii,
                     "Violation Type": ", ".join(pii_types) if pii_types else "-",
                     "Input": p,

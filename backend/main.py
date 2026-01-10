@@ -95,14 +95,23 @@ def mask_pii(text: str):
         masked = re.sub(r"\b(?:\d[ -]*?){13,19}\b", "[CREDIT_CARD]", masked)
 
     # 5. National ID (11 digits, continuous) - e.g. TCKN
-    # Strict 11 digits check to avoid catching valid phones (10 digits) or CCs
+    # Strict 11 digits check
     if re.search(r"\b\d{11}\b", masked):
         pii_types.append("ID_NUMBER")
         masked = re.sub(r"\b\d{11}\b", "[ID_NUMBER]", masked)
 
-    # 6. Context-Aware Fallbacks (for ambiguous unformatted numbers)
+    # 6. Context-Aware Fallbacks
+    
+    # ID Context: "id is 123456789", "tckn: 1234567"
+    # Catches shorter/different IDs if explicitly labeled as ID
+    context_id = r"(?i)\b(?:id|identification|tckn|passport|no|number)[\s\W]{0,5}(\d{7,})\b"
+    if re.search(context_id, masked):
+         pii_types.append("ID_NUMBER")
+         def repl(m): return m.group(0).replace(m.group(1), "[ID_NUMBER]")
+         masked = re.sub(context_id, repl, masked)
+
     # Phone Context: "phone is 123456"
-    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact|number)[\s\W]{0,5}(\d{6,})\b"
+    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact)[\s\W]{0,5}(\d{6,})\b"
     if re.search(context_phone, masked):
          pii_types.append("PHONE")
          def repl(m): return m.group(0).replace(m.group(1), "[PHONE]")

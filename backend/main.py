@@ -103,8 +103,8 @@ def mask_pii(text: str):
     # 6. Context-Aware Fallbacks
     
     # ID Context: "id is 123456789", "tckn: 1234567"
-    # Catches shorter/different IDs if explicitly labeled as ID
-    context_id = r"(?i)\b(?:id|identification|tckn|passport|no|number)[\s\W]{0,5}(\d{7,})\b"
+    # Catches shorter/different IDs if explicitly labeled as ID. Relaxed to 5+ digits.
+    context_id = r"(?i)\b(?:id|identification|tckn|passport|no|number)[\s\W]{0,5}(\d{5,})\b"
     if re.search(context_id, masked):
          pii_types.append("ID_NUMBER")
          def repl(m): return m.group(0).replace(m.group(1), "[ID_NUMBER]")

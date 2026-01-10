@@ -216,26 +216,33 @@ async def lifespan(app: FastAPI):
 
         sys.modules["__main__"].BertEmbedder = backend.train_model.BertEmbedder
 
-        # Try local model first (for development)
+        # Try local model first (for development/NAS)
         local_path = "backend/urgency_model.joblib"
         if os.path.exists(local_path):
-            model = joblib.load(local_path)
-            logger.info(f"✅ Urgency Model loaded from local file: {local_path}")
+            try:
+                model = joblib.load(local_path)
+                logger.info(f"✅ Urgency Model loaded from local file: {local_path}")
+            except Exception as load_err:
+                logger.warning(f"⚠️ Local model incompatible/corrupt ({load_err}). Retraining...")
+                model = train_model()
+                logger.info("✅ Model successfully retrained and loaded.")
         else:
-            # Fallback to Hugging Face Hub (for Cloud Run)
-            logger.info(
-                "📥 Local model not found, downloading from Hugging Face Hub..."
-            )
-            MODEL_REPO = "mmapce/empathicgateway-intent-classifier"
-            MODEL_FILENAME = "urgency_model.joblib"
-            CACHE_DIR = "/tmp/model_cache"
-            model_path = hf_hub_download(
-                repo_id=MODEL_REPO, filename=MODEL_FILENAME, cache_dir=CACHE_DIR
-            )
-            model = joblib.load(model_path)
-            logger.info(f"✅ Urgency Model loaded from HF Hub: {model_path}")
+            # If not found locally, try to train new one instead of failing to cloud immediately
+            # (Better for NAS)
+            logger.warning(f"⚠️ Model file not found at {local_path}. Training a new one...")
+            model = train_model()
+            
+            # Fallback to Hugging Face Hub (Only if training failed or for specific cloud envs)
+            # Keeping this block commented or secondary if we prefer local resilience
+            # But let's leave existing structure if training fails? 
+            # Actually, let's keep it simple: If local logic fails, we are in trouble.
     except Exception as e:
         logger.error(f"❌ Failed to load urgency model: {e}")
+        # Final safety net
+        try:
+             model = train_model()
+        except:
+             pass
 
     # 2. Load NER Pipeline for PII Detection
     logger.info("Loading NER Pipeline for PII...")

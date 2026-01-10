@@ -40,7 +40,7 @@ EmpathicGateway/
 │   └── urgency_model.joblib.dvc # AI Model (Tracked by DVC)
 ├── frontend/              # Streamlit Dashboard
 │   └── app.py             # UI Logic
-├── scripts/               # Deployment Utility Scripts
+├── scripts/               # Maintenance Scripts
 ├── docs/                  # Documentation
 │   └── TECHNICAL_REPORT.md
 └── docker-compose.yml     # Container Definitions

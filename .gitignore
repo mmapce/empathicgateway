@@ -72,3 +72,22 @@ scripts/fix_*
 scripts/generate_*
 scripts/stress_test.py
 scripts/trigger_chat.py
+
+# Cleanup: Explicitly ignore clutter
+docs/*.ipynb
+docs/PROJECT_REPORT*
+docs/CLOUDRUN.md
+docs/DEPLOYMENT.md
+docs/SYNOLOGY_DEPLOYMENT.md
+docs/DIAGRAMS.md
+docs/ARCHITECTURE_DIAGRAMS.drawio
+docs/HUGGINGFACE_UPLOAD.md
+cloudbuild*.yaml
+backend/worker.py
+backend/debug_*.py
+backend/list_intents.py
+scripts/check_cloud_run.sh
+scripts/deploy-*.sh
+scripts/deploy_*.py
+scripts/upload_*.py
+docker-compose.synology.yml

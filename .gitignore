@@ -69,12 +69,12 @@ scripts/test_*
 scripts/inspect_*
 scripts/scan_*
 scripts/fix_*
-scripts/generate_*
+# scripts/generate_*  <-- ALLOWED NOW
 scripts/stress_test.py
 scripts/trigger_chat.py
 
 # Cleanup: Explicitly ignore clutter
-docs/*.ipynb
+# docs/*.ipynb <-- ALLOWED NOW
 docs/PROJECT_REPORT*
 docs/CLOUDRUN.md
 docs/DEPLOYMENT.md

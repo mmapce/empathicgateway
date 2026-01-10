@@ -536,9 +536,9 @@ with col_monitor:
             # Reconstruct DF for PII
             df_sec = pd.DataFrame(st.session_state.stress_traffic_log)
             # Filter where PII was detected
-            pii_df = df_sec[df_sec["PII"]].copy() 
-            # Use the "Violation Type" column directly (populated from backend)
-            # pii_df["Violation Type"] = pii_df["Input"].apply(extract_pii_type) # REMOVED
+            pii_df = df_sec[df_sec["PII"]].copy()
+            
+            if not pii_df.empty:
                 st.dataframe(
                     pii_df[["Time", "Violation Type", "Input", "Lane"]],
                     use_container_width=True,

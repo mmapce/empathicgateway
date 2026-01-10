@@ -17,9 +17,9 @@ EmpathicGateway is an intelligent API Gateway designed to solve the "Latency vs.
 ### 🧠 1. Hybrid AI Engine
 *   **Architecture:** We use a "Transfer Learning" approach, combining:
     *   **Embedder:** `sentence-transformers/all-MiniLM-L6-v2` (BERT) for rich semantic understanding.
-    *   **Classifier:** `LogisticRegression` for ultra-low latency (<50ms) inference.
+    *   **Classifier:** `LogisticRegression` for ultra-low latency inference.
 *   **Result:** The system understands context (e.g., *"I lost my wallet"* vs *"I lost the game"*) without the heavy compute cost of LLMs.
-*   **Synthetic Injection:** To fix class imbalance, we synthesized 100+ variations of critical scenarios (Fraud/Theft) to ensure **100% Recall** on security threats.
+*   **Synthetic Injection:** To fix class imbalance, we synthesized 130+ variations of critical scenarios (Fraud/Theft) to ensure **100% Recall** on security threats.
 
 ### 🛡️ 2. Zero-Trust Security Guardrails
 Privacy is handled *before* any data touches the database or downstream agents.
@@ -41,6 +41,17 @@ Privacy is handled *before* any data touches the database or downstream agents.
 
 ---
 
+## 🌍 Deployment & Live Demo
+
+The production version of this system is deployed on a private **Synology NAS (DS923+)** home server.
+
+*   **Infrastructure:** Docker containers running on Synology Container Manager.
+*   **Remote Access:** Exposed securely via **Cloudflare Tunnel** (Zero Trust).
+*   **Live Demo:** A temporary public link can be provided upon request for evaluation.
+    *   *Note: To conserve resources, the server is active only during scheduled demo slots. It is turned on/off on demand. Please contact the author to request a live session.*
+
+---
+
 ## 📂 Project Structure
 
 ```
@@ -49,7 +60,7 @@ EmpathicGateway/
 │   ├── main.py            # FastAPI Gateway (API, PII Logic, Routing)
 │   ├── train_model.py     # Training Pipeline (Synthetic Injection)
 │   ├── models.py          # Pydantic Schemas
-│   └── urgency_model.joblib.dvc # AI Model (Version Controlled by DVC)
+│   └── urgency_model.joblib # AI Model
 ├── frontend/
 │   └── app.py             # Streamlit Ops Dashboard
 ├── docs/                  # Documentation & Reports
@@ -117,7 +128,7 @@ streamlit run frontend/app.py --server.port 8503
 | Component | Technology | Performance |
 | :--- | :--- | :--- |
 | **Model** | BERT (MiniLM) + LogReg | 99.8% Accuracy |
-| **API** | FastAPI (Async) | <50ms Latency |
+| **API** | FastAPI (Async) | **~20ms Latency** |
 | **Frontend** | Streamlit | Real-time (Active Polling) |
 | **Security** | Hybrid (Regex + NER) | 95%+ PII Recall |
 

@@ -76,18 +76,8 @@ def mask_pii(text: str):
         pii_types.append("EMAIL")
         masked = re.sub(r"[\w\.-]+@[\w\.-]+\.\w+", "[EMAIL]", masked)
     
-    # Improved Credit Card: Catch 10-19 digits (allowing spaces/dashes)
-    # This covers "12312 12312" (10 digits)
-    if re.search(r"\b(?:\d[ -]*?){10,19}\b", masked):
-        pii_types.append("CREDIT_CARD")
-        masked = re.sub(r"\b(?:\d[ -]*?){10,19}\b", "[CREDIT_CARD]", masked)
-
-    if re.search(r"\b\d{7,11}\b", masked):
-        pii_types.append("ID_NUMBER")
-        masked = re.sub(r"\b\d{7,11}\b", "[ID_NUMBER]", masked)
-
     # Improved Phone: Supports 3-4-4 (555-0199-8888) and Context-Aware
-    # Middle group changed from \d{3} to \d{3,4} to support user's weird format
+    # MOVED UP: Check Phone BEFORE Credit Card to prevent false positives
     phone_pattern = r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}"
     # Context-Aware Phone: "phone: 123456", "number is 123456"
     context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact|number)[\s\W]{0,5}(\d{6,})\b"
@@ -97,10 +87,18 @@ def mask_pii(text: str):
         masked = re.sub(phone_pattern, "[PHONE]", masked)
     elif re.search(context_phone, masked):
         pii_types.append("PHONE")
-        masked = re.sub(context_phone, r"\1 [PHONE]", masked) # Keep context word? No, usually redacting the number is enough.
-        # Actually, let's just redact the capture group
+        masked = re.sub(context_phone, r"\1 [PHONE]", masked) 
         def repl(m): return m.group(0).replace(m.group(1), "[PHONE]")
         masked = re.sub(context_phone, repl, masked)
+
+    # Improved Credit Card: Catch 10-19 digits (allowing spaces/dashes)
+    if re.search(r"\b(?:\d[ -]*?){10,19}\b", masked):
+        pii_types.append("CREDIT_CARD")
+        masked = re.sub(r"\b(?:\d[ -]*?){10,19}\b", "[CREDIT_CARD]", masked)
+
+    if re.search(r"\b\d{7,11}\b", masked):
+        pii_types.append("ID_NUMBER")
+        masked = re.sub(r"\b\d{7,11}\b", "[ID_NUMBER]", masked)
 
     # 2. NER-based (Unstructured PII: Names, Locations, Orgs)
     # Lazy Load if needed (for Notebook usage)

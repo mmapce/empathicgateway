@@ -62,6 +62,13 @@ Access:
 
 See [CLOUDRUN.md](CLOUDRUN.md) for detailed instructions.
 
+### Synology NAS (Edge Deployment)
+We deploy on Synology Container Manager using `docker-compose.synology.yml`.
+*   **External Access:** Services are exposed via **Cloudflare Tunnel** (Zero Trust).
+*   **⚠️ Important:** The public URL (`https://<random-id>.trycloudflare.com`) is **dynamic**. It changes every time the `empathic-tunnel` container restarts.
+    *   *Check logs (`docker logs empathic-tunnel`) to find the current active URL.*
+
+
 ### Docker
 
 ```bash

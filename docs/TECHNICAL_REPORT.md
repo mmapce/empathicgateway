@@ -9,14 +9,43 @@
 **EmpathicGateway** is an intelligent, resilient API Gateway designed to solve the "Triage Bottleneck" in high-volume customer support systems. Unlike traditional "First-In, First-Out" queues, it uses **Edge AI** to instantly classify urgency, mask sensitive data (PII), and shed excess load during traffic spikes. The system achieves **99.8% classification accuracy** with **<50ms latency** on standard CPU hardware, enabling deployment on both Google Cloud Run and local Synology NAS devices.
 
 ## 2. System Architecture
-The solution follows a containerized microservices pattern, orchestrated via Docker.
+The solution follows a containerized microservices pattern, as illustrated below:
 
-| Component | Technology | Responsibility |
-| :--- | :--- | :--- |
-| **Backend** | Python, FastAPI, PyTorch | AI Inference, PII Masking, Traffic Routing (Async Semaphores). |
-| **Frontend** | Streamlit, Plotly | Ops Dashboard, Real-time Traffic Simulation, Load Visualization. |
-| **Gateway** | Cloudflare Tunnel | Zero-trust secure external access (NAS Deployment). |
-| **Model** | BERT + LogReg | Hybrid NLP for high-speed intent classification. |
+```mermaid
+graph LR
+    subgraph Offline [Offline Training]
+        direction TB
+        DS[Bitext Data] & SYN[Synthetic Data] --> PRE[Preprocessing]
+        PRE --> TRAIN[BERT + LogReg]
+        TRAIN --> MODEL[[Joblib Model]]
+    end
+
+    subgraph Online [Real-Time Pipeline]
+        direction LR
+        USER((User)) --> TUNNEL[Cloudflare Tunnel]
+        TUNNEL --> GATE[FastAPI Gateway]
+        GATE --> GUARD{Guardrails}
+        
+        GUARD -- "Malicious" --> BLOCK[Block]
+        GUARD -- "Safe" --> INF[Inference]
+        
+        MODEL -.-> INF
+        INF --> ROUTER{Priority Router}
+        ROUTER --> FAST[FASTER Lane]
+        ROUTER --> NORM[NORMAL Lane]
+    end
+    
+    style FAST fill:#28a745,color:white
+    style NORM fill:#ffc107,color:black
+    style BLOCK fill:#dc3545,color:white
+    style USER fill:#fff,stroke:#333
+```
+
+**Component Responsibilities:**
+*   **Backend:** AI Inference, PII Masking, Traffic Routing.
+*   **Frontend:** Ops Dashboard, Traffic Simulation.
+*   **Gateway:** Cloudflare Tunnel (Zero-trust external access).
+*   **Model:** Hybrid BERT + Logistic Regression.
 
 **Data Flow:**
 `User Request` → `PII Redaction` → `BERT Embedding` → `Intent Classification` → `Priority Queue` → `Downstream Agent`
@@ -59,6 +88,7 @@ The system is built to survive saturation.
 The system supports a hybrid lifecycle:
 *   **Cloud:** Google Cloud Run (Serverless, Auto-scaling).
 *   **Edge (NAS):** Synology NAS with **Cloudflare Tunnel**. This allows secure public access (`trycloudflare.com`) without exposing local ports or modifying router firewalls. The model was optimized to run on **CPU-only** (fixing MPS/CUDA dependencies) for hardware compatibility.
+    *   *Note: The tunnel generates a dynamic, transient URL on each restart, enhancing security by preventing static target probing.*
 
 ## 7. Performance Metrics
 *   **Accuracy:** **99.84%** (Validation Set)

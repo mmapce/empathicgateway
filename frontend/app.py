@@ -71,7 +71,11 @@ if 'stress_active' not in st.session_state: st.session_state.stress_active = Fal
 if 'stress_stats' not in st.session_state: st.session_state.stress_stats = {"Critical": 0, "High": 0, "Normal": 0, "Blocked": 0, "PII": 0}
 if 'stress_history' not in st.session_state: st.session_state.stress_history = []
 if 'stress_traffic_log' not in st.session_state: st.session_state.stress_traffic_log = []
-if 'request_interval' not in st.session_state: st.session_state.request_interval = 0.5
+if 'request_interval' not in st.session_state: st.session_state.request_interval = 1.0
+
+# Time-Based Aggregation State
+if 'last_bucket_time' not in st.session_state: st.session_state.last_bucket_time = time.time()
+if 'current_bucket' not in st.session_state: st.session_state.current_bucket = {"Critical": 0, "High": 0, "Normal": 0, "Blocked": 0, "PII": 0}
 # Initialize Config State if not present
 if 'sc_crit' not in st.session_state: st.session_state.sc_crit = 2
 if 'sc_high' not in st.session_state: st.session_state.sc_high = 3
@@ -114,7 +118,7 @@ with st.sidebar.expander("⚙️ Configuration"):
     
     if st.button("Apply Config"):
         try:
-            requests.post(f"{API_URL}/config", json={"fast_limit": lc_fast, "normal_limit": lc_norm}, headers={"X-API-Key": "empathic-secret-key"}, timeout=1)
+            requests.post(f"{API_URL}/config", json={"fast_limit": lc_fast, "normal_limit": lc_norm}, headers={"X-API-Key": "empathic-secret-key"}, timeout=5)
             st.toast("Configuration Updated!")
         except:
             st.error("Config Failed")
@@ -303,8 +307,15 @@ with col_chat:
         if "messages" not in st.session_state: st.session_state.messages = []
         st.session_state.messages.append({"role": "user", "content": prompt})
         
+        # Immediate Display
+        with container:
+             st.markdown(f"<div class='chat-user'>👤 {prompt}</div>", unsafe_allow_html=True)
+
         try:
-            res = requests.post(f"{API_URL}/chat", json={"text": prompt}, headers={"X-API-Key": "empathic-secret-key"}, timeout=5)
+            with container:
+                with st.spinner("Processing on Neural Engine..."):
+                    res = requests.post(f"{API_URL}/chat", json={"text": prompt}, headers={"X-API-Key": "empathic-secret-key"}, timeout=30)
+            
             if res.status_code == 200:
                 data = res.json()
                 st.session_state.last_meta = data
@@ -466,6 +477,9 @@ if st.session_state.stress_active:
     ]
     
     # Dynamic Concurrent Requests per tick
+    # Start Timer for Dynamic Sleep
+    loop_start = time.time()
+    
     payloads = []
     # Read from session state configuration
     count_crit = st.session_state.get('sc_crit', 2)
@@ -491,7 +505,7 @@ if st.session_state.stress_active:
     
     def send_req(payload):
         try:
-            res = requests.post(f"{API_URL}/chat", json=payload, headers={"X-API-Key": "empathic-secret-key"}, timeout=5)
+            res = requests.post(f"{API_URL}/chat", json=payload, headers={"X-API-Key": "empathic-secret-key"}, timeout=30)
             if res.status_code == 200:
                 d = res.json()
                 # Return explainability dict as well
@@ -537,14 +551,29 @@ if st.session_state.stress_active:
             })
             st.session_state.stress_traffic_log = st.session_state.stress_traffic_log[:50]
 
-    st.session_state.stress_history.append({
-        "Critical": current_crit,
-        "High": current_high,
-        "Normal": current_norm,
-        "Blocked": current_blocked,
-        "PII": current_pii
-    })
-    st.session_state.stress_history = st.session_state.stress_history[-20:]
-    
-    time.sleep(st.session_state.request_interval)
+    # --- TIME-BASED AGGREGATION LOGIC ---
+    # 1. Accumulate into current bucket
+    st.session_state.current_bucket["Critical"] += current_crit
+    st.session_state.current_bucket["High"] += current_high
+    st.session_state.current_bucket["Normal"] += current_norm
+    st.session_state.current_bucket["Blocked"] += current_blocked
+    st.session_state.current_bucket["PII"] += current_pii
+
+    # 2. Check if 1 second has passed
+    now = time.time()
+    if now - st.session_state.last_bucket_time >= 1.0:
+        # Flush bucket to history
+        st.session_state.stress_history.append(st.session_state.current_bucket.copy())
+        st.session_state.stress_history = st.session_state.stress_history[-20:] # Keep last 20 seconds
+        
+        # Reset bucket
+        st.session_state.current_bucket = {"Critical": 0, "High": 0, "Normal": 0, "Blocked": 0, "PII": 0}
+        st.session_state.last_bucket_time = now
+
+        st.session_state.last_bucket_time = now
+
+    # Dynamic Sleep: Compensate for execution time
+    elapsed = time.time() - loop_start
+    sleep_time = max(0, st.session_state.request_interval - elapsed)
+    time.sleep(sleep_time)
     st.rerun()

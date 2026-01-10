@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, List
 
 class ChatRequest(BaseModel):
-    text: str = Field(..., max_length=512, description="User query text, limited to 512 chars")
+    text: str = Field(..., max_length=2048, description="User query text, limited to 2048 chars")
     user_id: Optional[str] = "anonymous"
 
 class ChatResponse(BaseModel):

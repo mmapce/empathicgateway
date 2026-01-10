@@ -87,7 +87,8 @@ def mask_pii(text: str):
         masked = re.sub(r"\b\d{7,11}\b", "[ID_NUMBER]", masked)
 
     # Improved Phone: Supports 3-4-4 (555-0199-8888) and Context-Aware
-    phone_pattern = r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+    # Middle group changed from \d{3} to \d{3,4} to support user's weird format
+    phone_pattern = r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}"
     # Context-Aware Phone: "phone: 123456"
     context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact)[\s\W]{0,5}(\d{6,})\b"
 

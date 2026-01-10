@@ -1,0 +1,5 @@
+outs:
+- md5: 4ac04b57e8c48f3bd0c8d2102afce1ae
+  size: 94272
+  hash: md5
+  path: urgency_model.joblib

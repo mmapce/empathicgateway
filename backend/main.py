@@ -76,29 +76,37 @@ def mask_pii(text: str):
         pii_types.append("EMAIL")
         masked = re.sub(r"[\w\.-]+@[\w\.-]+\.\w+", "[EMAIL]", masked)
     
-    # Improved Phone: Supports 3-4-4 (555-0199-8888) and Context-Aware
-    # MOVED UP: Check Phone BEFORE Credit Card to prevent false positives
-    phone_pattern = r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}"
-    # Context-Aware Phone: "phone: 123456", "number is 123456"
-    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact|number)[\s\W]{0,5}(\d{6,})\b"
-
-    if re.search(phone_pattern, masked):
+    # 2. Strict Phone (Formatted) - e.g. 555-0199-8888, (555) 123-4567
+    # Requires at least one separator to distinguish from long numbers
+    phone_strict = r"(?:\+?\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]+\d{3,4}[-.\s]+\d{4}"
+    if re.search(phone_strict, masked):
         pii_types.append("PHONE")
-        masked = re.sub(phone_pattern, "[PHONE]", masked)
-    elif re.search(context_phone, masked):
-        pii_types.append("PHONE")
-        masked = re.sub(context_phone, r"\1 [PHONE]", masked) 
-        def repl(m): return m.group(0).replace(m.group(1), "[PHONE]")
-        masked = re.sub(context_phone, repl, masked)
+        masked = re.sub(phone_strict, "[PHONE]", masked)
 
-    # Improved Credit Card: Catch 10-19 digits (allowing spaces/dashes)
-    if re.search(r"\b(?:\d[ -]*?){10,19}\b", masked):
+    # 3. Special Credit Card (User's specific "12312 12312" format)
+    # Must run before generic CC to catch this specific pattern accurately
+    if re.search(r"\b\d{5} \d{5}\b", masked):
         pii_types.append("CREDIT_CARD")
-        masked = re.sub(r"\b(?:\d[ -]*?){10,19}\b", "[CREDIT_CARD]", masked)
+        masked = re.sub(r"\b\d{5} \d{5}\b", "[CREDIT_CARD]", masked)
 
-    if re.search(r"\b\d{7,11}\b", masked):
+    # 4. Standard Credit Card (13-19 digits)
+    if re.search(r"\b(?:\d[ -]*?){13,19}\b", masked):
+        pii_types.append("CREDIT_CARD")
+        masked = re.sub(r"\b(?:\d[ -]*?){13,19}\b", "[CREDIT_CARD]", masked)
+
+    # 5. National ID (11 digits, continuous) - e.g. TCKN
+    # Strict 11 digits check to avoid catching valid phones (10 digits) or CCs
+    if re.search(r"\b\d{11}\b", masked):
         pii_types.append("ID_NUMBER")
-        masked = re.sub(r"\b\d{7,11}\b", "[ID_NUMBER]", masked)
+        masked = re.sub(r"\b\d{11}\b", "[ID_NUMBER]", masked)
+
+    # 6. Context-Aware Fallbacks (for ambiguous unformatted numbers)
+    # Phone Context: "phone is 123456"
+    context_phone = r"(?i)\b(?:phone|call|mobile|cell|contact|number)[\s\W]{0,5}(\d{6,})\b"
+    if re.search(context_phone, masked):
+         pii_types.append("PHONE")
+         def repl(m): return m.group(0).replace(m.group(1), "[PHONE]")
+         masked = re.sub(context_phone, repl, masked)
 
     # 2. NER-based (Unstructured PII: Names, Locations, Orgs)
     # Lazy Load if needed (for Notebook usage)

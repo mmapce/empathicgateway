@@ -60,3 +60,15 @@ test_ner.py
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Debug & Utility Scripts (Local Only)
+scripts/debug_*
+scripts/check_status.py
+scripts/force_*
+scripts/test_*
+scripts/inspect_*
+scripts/scan_*
+scripts/fix_*
+scripts/generate_*
+scripts/stress_test.py
+scripts/trigger_chat.py
